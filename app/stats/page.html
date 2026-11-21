@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:,">
+<title>WarpFlow · статистика</title>
+<style>
+  :root {
+    --bg: #f4f4f3;
+    --card: #ffffff;
+    --text: #0b0b0b;
+    --muted: #6b6b6b;
+    --faint: #9a9a9a;
+    --line: #e6e6e4;
+    --grid: #ececea;
+    --track: #ececea;
+    --ink: #464646;
+    --good: #1a7f37;
+    --bad: #c62828;
+    --warn: #b26a00;
+    --qr: #2a78d6;
+    --email: #eb6834;
+    --telegram: #1baf7a;
+    --radius: 22px;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.4 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  header {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+    margin-bottom: 22px;
+  }
+  h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+  h1 span { color: var(--muted); font-weight: 500; }
+  .updated { color: var(--muted); font-size: 14px; }
+  .spacer { flex: 1; }
+  .range { display: inline-flex; gap: 4px; padding: 4px; border-radius: 99px; background: var(--card); }
+  .range button {
+    border: 0; padding: 7px 14px; border-radius: 99px; background: none; color: var(--text);
+    font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .range button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  h2 { margin: 30px 0 12px; font-size: 17px; font-weight: 600; }
+  h2 small { margin-left: 6px; color: var(--muted); font-size: 14px; font-weight: 400; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .card { padding: 16px 18px; border-radius: var(--radius); background: var(--card); min-width: 0; }
+  .label { color: var(--muted); font-size: 13px; }
+  .value { margin-top: 4px; font-size: 26px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
+  .value small { margin-left: 4px; color: var(--muted); font-size: 14px; font-weight: 500; }
+  .sub { margin-top: 2px; color: var(--muted); font-size: 13px; }
+  .meter { height: 6px; margin-top: 10px; border-radius: 99px; background: var(--track); overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 99px; background: var(--ink); }
+  .meter i.hot { background: var(--warn); }
+  .meter i.full { background: var(--bad); }
+  .status { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 10px;
+    border-radius: 99px; background: var(--card); font-size: 14px;
+  }
+  .pill::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--faint); }
+  .pill.ok::before { background: var(--good); }
+  .pill.down::before { background: var(--bad); }
+  .pill .state { color: var(--muted); }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr)); gap: 12px; }
+  .chart-card { padding: 16px 18px 12px; border-radius: var(--radius); background: var(--card); position: relative; min-width: 0; }
+  .chart-card h3 { margin: 0 0 2px; font-size: 15px; font-weight: 600; }
+  .chart-card .sub { margin-bottom: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 2px 0 8px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; }
+  svg { display: block; width: 100%; overflow: visible; }
+  svg text { fill: var(--muted); font-size: 11px; }
+  .hit { fill: transparent; cursor: default; }
+  .hit:hover { fill: rgba(0, 0, 0, 0.04); }
+  .tip {
+    position: absolute; z-index: 5; pointer-events: none; min-width: 150px; padding: 9px 12px;
+    border-radius: 12px; background: #1e1e1e; color: #fff; font-size: 13px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); opacity: 0; transition: opacity 0.1s;
+  }
+  .tip b { display: block; margin-bottom: 4px; font-weight: 600; }
+  .tip div { display: flex; align-items: center; gap: 8px; }
+  .tip div span:last-child { margin-left: auto; padding-left: 12px; }
+  .tip i { width: 8px; height: 8px; border-radius: 2px; }
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); background: var(--card); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
+  th, td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; position: sticky; top: 0; background: var(--card); }
+  tr:last-child td { border-bottom: 0; }
+  td.zero { color: var(--faint); }
+  .list { margin: 0; padding: 0; list-style: none; }
+  .list li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .list li:last-child { border-bottom: 0; }
+  .list time { flex-shrink: 0; color: var(--muted); }
+  .list .ch { flex-shrink: 0; width: 70px; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 14px; }
+  .error-banner { padding: 12px 16px; margin-bottom: 16px; border-radius: 14px; background: #fde8e8; color: var(--bad); }
+  .error-banner:empty { display: none; }
+  @media (max-width: 600px) {
+    .value { font-size: 22px; }
+    .charts { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>WarpFlow <span>статистика</span></h1>
+    <span class="updated" id="updated">Загрузка…</span>
+    <span class="spacer"></span>
+    <div class="range" role="group" aria-label="Период">
+      <button type="button" data-days="7">7 дней</button>
+      <button type="button" data-days="30">30 дней</button>
+      <button type="button" data-days="90">90 дней</button>
+    </div>
+  </header>
+  <div class="error-banner" id="error" role="alert"></div>
+
+  <div class="status" id="status"></div>
+
+  <h2>Сервер</h2>
+  <div class="grid" id="server"></div>
+
+  <h2>Сегодня <small id="today-date"></small></h2>
+  <div class="grid" id="today"></div>
+
+  <h2>Сейчас хранится</h2>
+  <div class="grid" id="stored"></div>
+
+  <h2>По дням <small id="range-label"></small></h2>
+  <div class="charts">
+    <div class="chart-card" id="chart-sends"></div>
+    <div class="chart-card" id="chart-visitors"></div>
+    <div class="chart-card" id="chart-uploaded"></div>
+    <div class="chart-card" id="chart-downloaded"></div>
+  </div>
+
+  <h2>Последние 24 часа</h2>
+  <div class="charts">
+    <div class="chart-card" id="chart-hours"></div>
+    <div class="chart-card" id="chart-hours-receive"></div>
+  </div>
+
+  <h2>Как пользуются <small id="usage-label"></small></h2>
+  <div class="grid" id="usage"></div>
+
+  <h2>Ошибки доставки <small>последние 10</small></h2>
+  <div class="card"><ul class="list" id="failures"></ul></div>
+
+  <h2>Таблица по дням</h2>
+  <div class="table-wrap"><table id="table"></table></div>
+</main>
+
+<script>
+const CHANNELS = [
+  { key: 'qr', name: 'QR / код', color: 'var(--qr)' },
+  { key: 'email', name: 'Почта', color: 'var(--email)' },
+  { key: 'telegram', name: 'Telegram', color: 'var(--telegram)' },
+]
+const REFRESH = 15000
+const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+
+let days = 30
+try { days = Number(localStorage.getItem('stats:days')) || 30 } catch {}
+
+const $ = (id) => document.getElementById(id)
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+const num = (n) => Math.round(n).toLocaleString('ru-RU')
+
+function size(bytes) {
+  const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ']
+  let i = 0
+  while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++ }
+  const text = i === 0 || bytes >= 10 ? String(Math.round(bytes)) : bytes.toFixed(1).replace('.', ',')
+  return `${text} ${units[i]}`
+}
+
+function duration(seconds) {
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return d ? `${d} д ${h} ч` : h ? `${h} ч ${m} мин` : `${m} мин`
+}
+
+const dayLabel = (iso) => { const [, m, d] = iso.split('-'); return `${Number(d)} ${MONTHS[Number(m) - 1]}` }
+const timeLabel = (ts) => new Date(ts * 1000).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const hourLabel = (ts) => new Date(ts * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+const percent = (part, whole) => (whole ? Math.round((part / whole) * 100) : 0)
+
+function card(label, value, sub = '', meter = null) {
+  let bar = ''
+  if (meter !== null) {
+    const p = Math.max(0, Math.min(100, meter))
+    bar = `<div class="meter"><i class="${p >= 90 ? 'full' : p >= 75 ? 'hot' : ''}" style="width:${p}%"></i></div>`
+  }
+  return `<div class="card"><div class="label">${esc(label)}</div><div class="value">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ''}${bar}</div>`
+}
+
+function pill(name, ok, state) {
+  return `<span class="pill ${ok === null ? '' : ok ? 'ok' : 'down'}">${esc(name)} <span class="state">${esc(state)}</span></span>`
+}
+
+/** Rounds the axis top up to 1, 2 or 5 × 10ⁿ. */
+function niceMax(max) {
+  if (max <= 0) return 1
+  const step = 10 ** Math.floor(Math.log10(max))
+  for (const m of [1, 2, 5, 10]) if (m * step >= max) return m * step
+  return 10 * step
+}
+
+/**
+ * Stacked bar chart: one column per label, series stacked bottom-up with 2px gaps,
+ * the top of each column rounded. A hover tooltip per column.
+ */
+function barChart(el, { title, subtitle = '', labels, tipTitles, series, format = num, tickEvery = 1 }) {
+  // Drawn at the card's real width, so the text keeps its size (redrawn on resize).
+  const width = Math.max(260, el.clientWidth - 36), height = 200, left = 52, bottom = 22, top = 8
+  const plotW = width - left, plotH = height - bottom - top
+  const totals = labels.map((_, i) => series.reduce((s, ser) => s + ser.values[i], 0))
+  const max = niceMax(Math.max(...totals))
+  const slot = plotW / labels.length
+  const barW = Math.max(2, Math.min(28, slot * 0.66))
+  const y = (v) => top + plotH - (v / max) * plotH
+
+  let svg = ''
+  for (const t of [0, max / 2, max]) {
+    svg += `<line x1="${left}" x2="${width}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid)" stroke-width="1"/>`
+    svg += `<text x="${left - 8}" y="${y(t) + 4}" text-anchor="end">${esc(format(t))}</text>`
+  }
+  labels.forEach((label, i) => {
+    const x = left + slot * i + (slot - barW) / 2
+    let base = 0
+    const parts = series.map((s) => ({ color: s.color, v: s.values[i] })).filter((p) => p.v > 0)
+    parts.forEach((p, j) => {
+      const y0 = y(base), y1 = y(base + p.v)
+      // 2px surface gap between stacked segments; every segment keeps at least 1px.
+      const h = Math.max(1, y0 - y1 - (j > 0 ? 2 : 0))
+      const yTop = y0 - (j > 0 ? 2 : 0) - h
+      const r = j === parts.length - 1 ? Math.min(4, barW / 2, h) : 0
+      svg += r
+        ? `<path d="M${x},${yTop + h} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + barW - r} Q${x + barW},${yTop} ${x + barW},${yTop + r} V${yTop + h} Z" fill="${p.color}"/>`
+        : `<rect x="${x}" y="${yTop}" width="${barW}" height="${h}" fill="${p.color}"/>`
+      base += p.v
+    })
+    // The last label is skipped when it would run into the previous one.
+    if (i % tickEvery === 0 || (i === labels.length - 1 && i % tickEvery >= tickEvery / 2)) {
+      svg += `<text x="${left + slot * i + slot / 2}" y="${height - 4}" text-anchor="middle">${esc(label)}</text>`
+    }
+    svg += `<rect class="hit" data-i="${i}" x="${left + slot * i}" y="${top}" width="${slot}" height="${plotH}"/>`
+  })
+
+  const legend = series.length > 1
+    ? `<div class="legend">${series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`
+    : ''
+  el.innerHTML = `<h3>${esc(title)}</h3>${subtitle ? `<div class="sub">${subtitle}</div>` : ''}${legend}
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(title)}">${svg}</svg><div class="tip"></div>`
+
+  const tip = el.querySelector('.tip')
+  el.querySelectorAll('.hit').forEach((hit) => {
+    hit.addEventListener('mouseenter', () => {
+      const i = Number(hit.dataset.i)
+      const rows = series.map((s) => `<div><i style="background:${s.color}"></i><span>${esc(s.name)}</span><span>${esc(format(s.values[i]))}</span></div>`)
+      if (series.length > 1) rows.push(`<div><span>Всего</span><span>${esc(format(totals[i]))}</span></div>`)
+      tip.innerHTML = `<b>${esc(tipTitles[i])}</b>${rows.join('')}`
+      const box = el.getBoundingClientRect(), r = hit.getBoundingClientRect()
+      const x = Math.min(r.left - box.left + r.width / 2 + 10, box.width - 170)
+      tip.style.left = `${Math.max(8, x)}px`
+      tip.style.top = `${r.top - box.top + 10}px`
+      tip.style.opacity = 1
+    })
+    hit.addEventListener('mouseleave', () => { tip.style.opacity = 0 })
+  })
+}
+
+function render(data) {
+  const now = new Date(data.generated_at * 1000)
+  $('updated').textContent = `обновлено в ${now.toLocaleTimeString('ru-RU')} · каждые ${REFRESH / 1000} с`
+  $('today-date').textContent = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: data.timezone })
+
+  const app = data.app
+  const ch = app.channels || {}
+  $('status').innerHTML = [
+    pill('Сайт', app.up, app.up ? `работает · ${app.response_ms} мс` : 'не отвечает'),
+    pill('Почта', app.up ? !!ch.email : null, !app.up ? '—' : ch.email ? 'работает' : 'отключена'),
+    pill('Telegram', app.up ? !!ch.telegram : null, !app.up ? '—' : ch.telegram ? 'подключён' : 'отключён'),
+  ].join('')
+
+  const s = data.server
+  const memP = percent(s.memory.used, s.memory.total)
+  const diskP = percent(s.disk.used, s.disk.total)
+  $('server').innerHTML = [
+    card('Процессор', `${Math.round(s.cpu_percent)}<small>%</small>`, `${s.cpus} ядер · нагрузка ${s.load.map((l) => l.toFixed(2)).join(' / ')}`, s.cpu_percent),
+    card('Память', `${memP}<small>%</small>`, `${size(s.memory.used)} из ${size(s.memory.total)}`, memP),
+    card('Диск', `${diskP}<small>%</small>`, `свободно ${size(s.disk.free)} из ${size(s.disk.total)}`, diskP),
+    card('Файлы WarpFlow', size(data.stored.bytes), `база ${size(s.database_bytes)} · ${percent(data.stored.bytes, s.disk.total)}% диска`),
+    card('Загружается сейчас', app.up ? size(app.uploading_bytes) : '—', 'идущие загрузки'),
+    card('Работает без перезагрузки', duration(s.uptime)),
+    card('Сеть с запуска', size(s.net.sent), `отдано · получено ${size(s.net.received)}`),
+  ].join('')
+
+  const t = data.today
+  const sentToday = t.sent.qr + t.sent.email + t.sent.telegram
+  $('today').innerHTML = [
+    card('Посетителей', num(t.visitors), `${num(t.senders)} отправляли · ${num(t.receivers)} получали`),
+    card('Отправок', num(sentToday), `QR ${num(t.sent.qr)} · почта ${num(t.sent.email)} · TG ${num(t.sent.telegram)}`),
+    card('Загружено файлов', num(t.files_uploaded), size(t.bytes_uploaded || 0)),
+    card('Скачано файлов', num(t.downloads), size(t.bytes_downloaded || 0)),
+    card('Открыто кодов', num(t.opened)),
+    card('Доставлено', num(t.delivered), t.delivery_failed ? `<span style="color:var(--bad)">не дошло ${num(t.delivery_failed)}</span>` : 'без ошибок'),
+    card('Неверных кодов', num(t.code_failed), `неверных паролей ${num(t.password_failed)}`),
+    card('Новых в Telegram', num(data.telegram.new_today), `всего ${num(data.telegram.recipients)} · отписались ${num(data.telegram.stopped)}`),
+  ].join('')
+
+  const st = data.stored
+  $('stored').innerHTML = [
+    card('Отправок', num(st.uploads), `черновиков ${num(st.drafts)}`),
+    card('Файлов', num(st.files), `самый большой ${size(st.largest_file)}`),
+    card('Объём', size(st.bytes)),
+    card('QR-кодов', num(st.qr_codes), `с паролем ${num(st.with_password)}`),
+    card('Удалятся после скачивания', num(st.burn)),
+    card('Истекает за час', num(st.expiring_hour)),
+    card('Ждут доставки', num(st.pending_deliveries)),
+  ].join('')
+
+  const daysData = data.days
+  const labels = daysData.map((d) => dayLabel(d.date))
+  const tipTitles = daysData.map((d) => new Date(d.date + 'T12:00').toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' }))
+  const tickEvery = Math.ceil(daysData.length / (window.innerWidth < 600 ? 4 : 7))
+  const range = `${dayLabel(daysData[0].date)} — ${dayLabel(daysData.at(-1).date)}`
+  $('range-label').textContent = range
+  const total = (key) => daysData.reduce((sum, d) => sum + (d[key] || 0), 0)
+  const sendTotal = daysData.reduce((sum, d) => sum + d.sent.qr + d.sent.email + d.sent.telegram, 0)
+
+  barChart($('chart-sends'), {
+    title: 'Отправки', subtitle: `${num(sendTotal)} за период`, labels, tipTitles, tickEvery,
+    series: CHANNELS.map((c) => ({ name: c.name, color: c.color, values: daysData.map((d) => d.sent[c.key]) })),
+  })
+  barChart($('chart-visitors'), {
+    title: 'Посетители', subtitle: 'отправляли или получали, по дням', labels, tipTitles, tickEvery,
+    series: [{ name: 'Посетителей', color: 'var(--ink)', values: daysData.map((d) => d.visitors) }],
+  })
+  barChart($('chart-uploaded'), {
+    title: 'Загружено', subtitle: `${num(total('files_uploaded'))} файлов · ${size(total('bytes_uploaded'))}`, labels, tipTitles, tickEvery, format: size,
+    series: [{ name: 'Загружено', color: 'var(--ink)', values: daysData.map((d) => d.bytes_uploaded || 0) }],
+  })
+  barChart($('chart-downloaded'), {
+    title: 'Скачано', subtitle: `${num(total('downloads'))} файлов · ${size(total('bytes_downloaded'))}`, labels, tipTitles, tickEvery, format: size,
+    series: [{ name: 'Скачано', color: 'var(--ink)', values: daysData.map((d) => d.bytes_downloaded || 0) }],
+  })
+
+  const hours = data.hours
+  const hourLabels = hours.map((h) => hourLabel(h.start).slice(0, 2))
+  const hourTips = hours.map((h) => `${hourLabel(h.start)} — ${hourLabel(h.start + 3600)}`)
+  barChart($('chart-hours'), {
+    title: 'Отправки по часам', labels: hourLabels, tipTitles: hourTips, tickEvery: 3,
+    series: CHANNELS.map((c) => ({ name: c.name, color: c.color, values: hours.map((h) => h.sent[c.key]) })),
+  })
+  barChart($('chart-hours-receive'), {
+    title: 'Скачивания по часам', subtitle: 'файлов скачано за час', labels: hourLabels, tipTitles: hourTips, tickEvery: 3,
+    series: [{ name: 'Скачиваний', color: 'var(--ink)', values: hours.map((h) => h.downloads) }],
+  })
+
+  const u = data.usage
+  $('usage-label').textContent = `за ${daysData.length} дн.`
+  const channelTotal = (key) => daysData.reduce((sum, d) => sum + d.sent[key], 0)
+  $('usage').innerHTML = [
+    ...CHANNELS.map((c) => card(c.name, `${percent(channelTotal(c.key), sendTotal)}<small>%</small>`, `${num(channelTotal(c.key))} отправок`)),
+    card('QR с паролем', `${percent(u.with_password, u.qr)}<small>%</small>`, `${num(u.with_password)} из ${num(u.qr)}`),
+    card('QR с удалением', `${percent(u.burn, u.qr)}<small>%</small>`, `после скачивания · ${num(u.burn)} из ${num(u.qr)}`),
+    card('Открытий на отправку', u.qr ? (total('opened') / u.qr).toFixed(1).replace('.', ',') : '—', 'кодов открыто / QR создано'),
+  ].join('')
+
+  $('failures').innerHTML = data.failures.length
+    ? data.failures.map((f) => `<li><time>${esc(timeLabel(f.ts))}</time><span class="ch">${esc(CHANNELS.find((c) => c.key === f.channel)?.name ?? f.channel)}</span><span>${esc(f.error || 'без описания')}</span></li>`).join('')
+    : '<li class="empty">Ошибок не было</li>'
+
+  const cell = (v, text = num(v)) => `<td class="${v ? '' : 'zero'}">${text}</td>`
+  $('table').innerHTML = `<thead><tr><th>День</th><th>Посетители</th><th>QR</th><th>Почта</th><th>Telegram</th><th>Открыто</th><th>Файлов загружено</th><th>Загружено</th><th>Скачиваний</th><th>Скачано</th></tr></thead><tbody>${
+    [...daysData].reverse().map((d) => `<tr><td>${esc(dayLabel(d.date))}</td>${cell(d.visitors)}${cell(d.sent.qr)}${cell(d.sent.email)}${cell(d.sent.telegram)}${cell(d.opened)}${cell(d.files_uploaded)}${cell(d.bytes_uploaded, size(d.bytes_uploaded || 0))}${cell(d.downloads)}${cell(d.bytes_downloaded, size(d.bytes_downloaded || 0))}</tr>`).join('')
+  }</tbody>`
+}
+
+let timer = null
+let lastData = null
+let resizeTimer = null
+window.addEventListener('resize', () => {
+  window.clearTimeout(resizeTimer)
+  resizeTimer = window.setTimeout(() => lastData && render(lastData), 150)
+})
+
+async function load() {
+  window.clearTimeout(timer)
+  try {
+    const response = await fetch(`api/stats?days=${days}`, { cache: 'no-store' })
+    if (!response.ok) throw new Error(`Сервер статистики ответил ${response.status}`)
+    lastData = await response.json()
+    render(lastData)
+    $('error').textContent = ''
+  } catch (err) {
+    $('error').textContent = `Не удалось обновить: ${err.message}`
+  }
+  timer = window.setTimeout(load, REFRESH)
+}
+
+function setDays(value) {
+  days = value
+  try { localStorage.setItem('stats:days', String(value)) } catch {}
+  document.querySelectorAll('.range button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.days) === days)))
+  load()
+}
+document.querySelectorAll('.range button').forEach((b) => b.addEventListener('click', () => setDays(Number(b.dataset.days))))
+setDays(days)
+</script>
+</body>
+</html>
